@@ -1,5 +1,6 @@
 package ru.gb.chat.client;
 
+import org.apache.commons.io.input.ReversedLinesFileReader;
 import ru.gb.chat.common.Common;
 import ru.gb.javatwo.network.SocketThread;
 import ru.gb.javatwo.network.SocketThreadListener;
@@ -8,12 +9,20 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
+import java.util.Scanner;
 
 public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, SocketThreadListener {
 
@@ -22,15 +31,16 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     private final JTextArea log = new JTextArea();
     private final JPanel panelTop = new JPanel(new GridLayout(2, 3));
-    private final JTextField tfIPAddress = new JTextField("95.84.209.91");
+    private final JTextField tfIPAddress = new JTextField("127.0.0.1");
     private final JTextField tfPort = new JTextField("8189");
     private final JCheckBox cbAlwaysOnTop = new JCheckBox("Always on top");
-    private final JTextField tfLogin = new JTextField("ivan");
+    private final JTextField tfLogin = new JTextField("gremmlen");
     private final JPasswordField tfPassword = new JPasswordField("123");
     private final JButton btnLogin = new JButton("Login");
 
     private final JPanel panelBottom = new JPanel(new BorderLayout());
     private final JButton btnDisconnect = new JButton("<html><b>Disconnect</b></html>");
+    private final JButton btnChangeNick = new JButton("<html><b>ChangeNick</b></html>");
     private final JTextField tfMessage = new JTextField();
     private final JButton btnSend = new JButton("Send");
 
@@ -56,6 +66,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         tfMessage.addActionListener(this);
         btnLogin.addActionListener(this);
         btnDisconnect.addActionListener(this);
+        btnChangeNick.addActionListener(this);
 
         panelTop.add(tfIPAddress);
         panelTop.add(tfPort);
@@ -63,7 +74,9 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         panelTop.add(tfLogin);
         panelTop.add(tfPassword);
         panelTop.add(btnLogin);
+        panelBottom.setLayout(new GridLayout(1, 2));
         panelBottom.add(btnDisconnect, BorderLayout.WEST);
+        panelBottom.add(btnChangeNick, BorderLayout.WEST);
         panelBottom.add(tfMessage, BorderLayout.CENTER);
         panelBottom.add(btnSend, BorderLayout.EAST);
         panelBottom.setVisible(false);
@@ -96,9 +109,20 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             connect();
         } else if (src == btnDisconnect) {
             socketThread.close();
+        } else if (src == btnChangeNick) {
+            updateNickname();
         } else {
             throw new RuntimeException("Unknown source: " + src);
         }
+    }
+
+    private void updateNickname () {
+        String newNickname =
+                JOptionPane.showInputDialog(
+                        "Новый nickname?","newUser");
+        if (newNickname==null || newNickname.trim().isEmpty())
+            return;
+        socketThread.sendMessage(Common.getChangeNickRequest(newNickname, tfLogin.getText()));
     }
 
     private void connect() {
@@ -130,6 +154,22 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         }
     }
 
+    private void wrtLogMsgToWin() {
+        try {
+            Scanner scanner = new Scanner(new File("log.txt"));
+            for (int i = 0; i <= 100; i++) {
+               if (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                log.append(line + "\n");
+               } else {
+                   break;
+               }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void putLog(String msg) {
         if ("".equals(msg)) return;
         SwingUtilities.invokeLater(new Runnable() {
@@ -137,6 +177,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             public void run() {
                 log.append(msg + "\n");
                 log.setCaretPosition(log.getDocument().getLength());
+                wrtMsgToLogFile(msg, Thread.currentThread().getName());
             }
         });
     }
@@ -181,6 +222,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         String login = tfLogin.getText();
         String password = new String(tfPassword.getPassword());
         thread.sendMessage(Common.getAuthRequest(login, password));
+        wrtLogMsgToWin();
     }
 
     @Override
@@ -217,6 +259,9 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
                 String[] usersArr = users.split(Common.DELIMITER);
                 Arrays.sort(usersArr);
                 userList.setListData(usersArr);
+                break;
+            case Common.CHANGE_NICK_REQUEST:
+                setTitle(WINDOW_TITLE + " entered with nickname: " + arr[1]);
                 break;
             default:
                 throw new RuntimeException("Unknown message type: " + msg);
