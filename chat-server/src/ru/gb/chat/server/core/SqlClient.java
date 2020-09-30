@@ -36,5 +36,18 @@ public class SqlClient {
         return null;
     }
 
+    synchronized static boolean setNewNickname(String newUsername, String login) {
+        String query = String.format("update users set nickname = ? where login = ?");
+        try(PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setString(1, newUsername);
+            statement.setString(2, login);
+            statement.executeUpdate();
+            //connection.commit();
+        } catch (SQLException e) {
+            throw  new RuntimeException(e);
+        }
+        return true;
+    }
+
 
 }
