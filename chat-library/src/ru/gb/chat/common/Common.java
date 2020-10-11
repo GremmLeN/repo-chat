@@ -19,6 +19,12 @@ public class Common {
     public static final String USER_LIST = "/user_list";
     public static final String TYPE_BCAST_CLIENT = "/client_msg";
     public static final String TYPE_CLIENT_PRIVATE = "/private";
+    //Запросы смены ника
+    public static final String CHANGE_NICK_REQUEST = "/change_nick";
+
+    public static String getChangeNickRequest(String newNickname, String login) {
+        return CHANGE_NICK_REQUEST + DELIMITER + newNickname + DELIMITER + login;
+    }
 
     public static String getAuthRequest(String login, String password) {
         return AUTH_REQUEST + DELIMITER + login + DELIMITER + password;

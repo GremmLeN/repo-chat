@@ -49,4 +49,9 @@ public class ClientThread extends SocketThread {
         close();
     }
 
+    void clientChangeNickname(String newNickname, String msg) {
+        this.nickname = newNickname;
+        sendMessage(msg);
+    }
+
 }

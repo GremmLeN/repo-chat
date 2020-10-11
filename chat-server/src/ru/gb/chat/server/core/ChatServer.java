@@ -155,6 +155,16 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
                 sendToAllAuthorizedClients(
                         Common.getTypeBroadcast(client.getNickname(), arr[1]));
                 break;
+            case Common.CHANGE_NICK_REQUEST:
+                String newNickname = arr[1];
+                String login = arr[2];
+                String curNickname = client.getNickname();
+                if(SqlClient.setNewNickname(newNickname, login)) {
+                    ClientThread curClient = findClientByNickname(curNickname);
+                    curClient.clientChangeNickname(newNickname, msg);
+                    sendToAllAuthorizedClients(Common.getUserList(getUsers()));
+                }
+                break;
             default:
                 client.msgFormatError(msg);
         }
