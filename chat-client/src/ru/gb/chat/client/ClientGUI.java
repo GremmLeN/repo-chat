@@ -1,5 +1,6 @@
 package ru.gb.chat.client;
 
+import org.apache.commons.io.input.ReversedLinesFileReader;
 import ru.gb.chat.common.Common;
 import ru.gb.javatwo.network.SocketThread;
 import ru.gb.javatwo.network.SocketThreadListener;
@@ -8,12 +9,20 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
+import java.util.Scanner;
 
 public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, SocketThreadListener {
 
@@ -145,6 +154,22 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         }
     }
 
+    private void wrtLogMsgToWin() {
+        try {
+            Scanner scanner = new Scanner(new File("log.txt"));
+            for (int i = 0; i <= 100; i++) {
+               if (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                log.append(line + "\n");
+               } else {
+                   break;
+               }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void putLog(String msg) {
         if ("".equals(msg)) return;
         SwingUtilities.invokeLater(new Runnable() {
@@ -152,6 +177,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             public void run() {
                 log.append(msg + "\n");
                 log.setCaretPosition(log.getDocument().getLength());
+                wrtMsgToLogFile(msg, Thread.currentThread().getName());
             }
         });
     }
@@ -196,6 +222,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         String login = tfLogin.getText();
         String password = new String(tfPassword.getPassword());
         thread.sendMessage(Common.getAuthRequest(login, password));
+        wrtLogMsgToWin();
     }
 
     @Override
